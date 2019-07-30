@@ -6,3 +6,13 @@ message Debt {
     int64 value = 1;
     string desc = 2;
 }
+
+message DebtList {
+    repeated Debt debts = 1;
+}
+
+message Void {}
+
+service Debts {
+    rpc List(Void) returns(DebtList) {}
+}

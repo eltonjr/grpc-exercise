@@ -4,8 +4,12 @@
 package ledger
 
 import (
+	context "context"
 	fmt "fmt"
 	proto "github.com/golang/protobuf/proto"
+	grpc "google.golang.org/grpc"
+	codes "google.golang.org/grpc/codes"
+	status "google.golang.org/grpc/status"
 	math "math"
 )
 
@@ -67,18 +71,174 @@ func (m *Debt) GetDesc() string {
 	return ""
 }
 
+type DebtList struct {
+	Debts                []*Debt  `protobuf:"bytes,1,rep,name=debts,proto3" json:"debts,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *DebtList) Reset()         { *m = DebtList{} }
+func (m *DebtList) String() string { return proto.CompactTextString(m) }
+func (*DebtList) ProtoMessage()    {}
+func (*DebtList) Descriptor() ([]byte, []int) {
+	return fileDescriptor_2fa85ec7ea610725, []int{1}
+}
+
+func (m *DebtList) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_DebtList.Unmarshal(m, b)
+}
+func (m *DebtList) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_DebtList.Marshal(b, m, deterministic)
+}
+func (m *DebtList) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_DebtList.Merge(m, src)
+}
+func (m *DebtList) XXX_Size() int {
+	return xxx_messageInfo_DebtList.Size(m)
+}
+func (m *DebtList) XXX_DiscardUnknown() {
+	xxx_messageInfo_DebtList.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_DebtList proto.InternalMessageInfo
+
+func (m *DebtList) GetDebts() []*Debt {
+	if m != nil {
+		return m.Debts
+	}
+	return nil
+}
+
+type Void struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *Void) Reset()         { *m = Void{} }
+func (m *Void) String() string { return proto.CompactTextString(m) }
+func (*Void) ProtoMessage()    {}
+func (*Void) Descriptor() ([]byte, []int) {
+	return fileDescriptor_2fa85ec7ea610725, []int{2}
+}
+
+func (m *Void) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_Void.Unmarshal(m, b)
+}
+func (m *Void) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_Void.Marshal(b, m, deterministic)
+}
+func (m *Void) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Void.Merge(m, src)
+}
+func (m *Void) XXX_Size() int {
+	return xxx_messageInfo_Void.Size(m)
+}
+func (m *Void) XXX_DiscardUnknown() {
+	xxx_messageInfo_Void.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_Void proto.InternalMessageInfo
+
 func init() {
 	proto.RegisterType((*Debt)(nil), "ledger.Debt")
+	proto.RegisterType((*DebtList)(nil), "ledger.DebtList")
+	proto.RegisterType((*Void)(nil), "ledger.Void")
 }
 
 func init() { proto.RegisterFile("debt.proto", fileDescriptor_2fa85ec7ea610725) }
 
 var fileDescriptor_2fa85ec7ea610725 = []byte{
-	// 92 bytes of a gzipped FileDescriptorProto
+	// 159 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0xe2, 0x4a, 0x49, 0x4d, 0x2a,
 	0xd1, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0x62, 0xcb, 0x49, 0x4d, 0x49, 0x4f, 0x2d, 0x52, 0x32,
 	0xe0, 0x62, 0x71, 0x49, 0x4d, 0x2a, 0x11, 0x12, 0xe1, 0x62, 0x2d, 0x4b, 0xcc, 0x29, 0x4d, 0x95,
 	0x60, 0x54, 0x60, 0xd4, 0x60, 0x0e, 0x82, 0x70, 0x84, 0x84, 0xb8, 0x58, 0x52, 0x52, 0x8b, 0x93,
-	0x25, 0x98, 0x14, 0x18, 0x35, 0x38, 0x83, 0xc0, 0xec, 0x24, 0x36, 0xb0, 0x01, 0xc6, 0x80, 0x00,
-	0x00, 0x00, 0xff, 0xff, 0xdd, 0x25, 0xc1, 0xe6, 0x4e, 0x00, 0x00, 0x00,
+	0x25, 0x98, 0x14, 0x18, 0x35, 0x38, 0x83, 0xc0, 0x6c, 0x25, 0x3d, 0x2e, 0x0e, 0x90, 0x0e, 0x9f,
+	0xcc, 0xe2, 0x12, 0x21, 0x25, 0x2e, 0x56, 0x90, 0x99, 0xc5, 0x12, 0x8c, 0x0a, 0xcc, 0x1a, 0xdc,
+	0x46, 0x3c, 0x7a, 0x10, 0x53, 0xf5, 0x40, 0x0a, 0x82, 0x20, 0x52, 0x4a, 0x6c, 0x5c, 0x2c, 0x61,
+	0xf9, 0x99, 0x29, 0x46, 0x86, 0x5c, 0xac, 0x20, 0xe1, 0x62, 0x21, 0x0d, 0x2e, 0x16, 0xb0, 0x66,
+	0xb8, 0x6a, 0x90, 0xb4, 0x94, 0x00, 0xb2, 0x5e, 0x90, 0xbc, 0x12, 0x43, 0x12, 0x1b, 0xd8, 0xad,
+	0xc6, 0x80, 0x00, 0x00, 0x00, 0xff, 0xff, 0x16, 0xf5, 0x1a, 0x48, 0xb9, 0x00, 0x00, 0x00,
+}
+
+// Reference imports to suppress errors if they are not otherwise used.
+var _ context.Context
+var _ grpc.ClientConn
+
+// This is a compile-time assertion to ensure that this generated file
+// is compatible with the grpc package it is being compiled against.
+const _ = grpc.SupportPackageIsVersion4
+
+// DebtsClient is the client API for Debts service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
+type DebtsClient interface {
+	List(ctx context.Context, in *Void, opts ...grpc.CallOption) (*DebtList, error)
+}
+
+type debtsClient struct {
+	cc *grpc.ClientConn
+}
+
+func NewDebtsClient(cc *grpc.ClientConn) DebtsClient {
+	return &debtsClient{cc}
+}
+
+func (c *debtsClient) List(ctx context.Context, in *Void, opts ...grpc.CallOption) (*DebtList, error) {
+	out := new(DebtList)
+	err := c.cc.Invoke(ctx, "/ledger.Debts/List", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// DebtsServer is the server API for Debts service.
+type DebtsServer interface {
+	List(context.Context, *Void) (*DebtList, error)
+}
+
+// UnimplementedDebtsServer can be embedded to have forward compatible implementations.
+type UnimplementedDebtsServer struct {
+}
+
+func (*UnimplementedDebtsServer) List(ctx context.Context, req *Void) (*DebtList, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method List not implemented")
+}
+
+func RegisterDebtsServer(s *grpc.Server, srv DebtsServer) {
+	s.RegisterService(&_Debts_serviceDesc, srv)
+}
+
+func _Debts_List_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Void)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DebtsServer).List(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/ledger.Debts/List",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DebtsServer).List(ctx, req.(*Void))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+var _Debts_serviceDesc = grpc.ServiceDesc{
+	ServiceName: "ledger.Debts",
+	HandlerType: (*DebtsServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "List",
+			Handler:    _Debts_List_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "debt.proto",
 }
