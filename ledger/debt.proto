@@ -15,4 +15,5 @@ message Void {}
 
 service Debts {
     rpc List(Void) returns(DebtList) {}
+    rpc Add(Debt) returns(Void) {}
 }

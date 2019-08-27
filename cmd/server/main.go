@@ -3,9 +3,8 @@ package main
 import (
 	"bytes"
 	"context"
-	"encoding/gob"
+	"encoding/binary"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"log"
 	"net"
@@ -17,88 +16,82 @@ import (
 	"github.com/eltonjr/protocol-buffer-exercise/ledger"
 )
 
-const dbFile = "protoDB.db"
+const (
+	dbFile     = "protoDB.db"
+	binarySize = 8
+)
 
-type taskServer struct{}
-
-func (ts taskServer) List(context.Context, *ledger.Void) (*ledger.DebtList, error) {
-	return nil, nil
-}
+type debtsServer struct{}
 
 func main() {
 	srv := grpc.NewServer()
-	var tasks taskServer
-	ledger.RegisterDebtsServer(srv, tasks)
+	var server debtsServer
+	ledger.RegisterDebtsServer(srv, server)
 
 	l, err := net.Listen("tcp", ":8888")
 	if err != nil {
 		log.Fatal("could not listen on port :8888")
 	}
+	fmt.Println("Listening on :8888")
 	log.Fatal(srv.Serve(l))
 }
 
-func add(value int64, s string) error {
-	debt := &ledger.Debt{
-		Desc:  s,
-		Value: value,
-	}
-
+func (ds debtsServer) Add(ctx context.Context, debt *ledger.Debt) (*ledger.Void, error) {
 	b, err := proto.Marshal(debt)
 	if err != nil {
-		return fmt.Errorf("could not marshal debt: %v", err)
+		return nil, fmt.Errorf("could not marshal debt: %v", err)
 	}
 
 	f, err := os.OpenFile(dbFile, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
-		return fmt.Errorf("could not open file %s: %v", dbFile, err)
+		return nil, fmt.Errorf("could not open file %s: %v", dbFile, err)
 	}
 
-	if err = gob.NewEncoder(f).Encode(int64(len(b))); err != nil {
-		return fmt.Errorf("could not write message's length: %v", err)
+	if err := binary.Write(f, binary.LittleEndian, int64(len(b))); err != nil {
+		return nil, fmt.Errorf("could not encode length of message: %v", err)
 	}
 
 	_, err = f.Write(b)
 	if err != nil {
-		return fmt.Errorf("could not write debt to file: %v", err)
+		return nil, fmt.Errorf("could not write debt to file: %v", err)
 	}
 
 	if err = f.Close(); err != nil {
-		return fmt.Errorf("could not close file %s: %v", dbFile, err)
+		return nil, fmt.Errorf("could not close file %s: %v", dbFile, err)
 	}
 
-	return nil
+	return &ledger.Void{}, nil
 }
 
-func list() error {
+func (ds debtsServer) List(context.Context, *ledger.Void) (*ledger.DebtList, error) {
 	b, err := ioutil.ReadFile(dbFile)
 	if err != nil {
-		return fmt.Errorf("could not open file %s: %v", dbFile, err)
+		return nil, fmt.Errorf("could not open file %s: %v", dbFile, err)
 	}
 
+	var debts ledger.DebtList
 	for {
 		if len(b) == 0 {
-			return nil
+			return &debts, nil
 		}
-		if len(b) < 4 {
-			return fmt.Errorf("wrong length length %d", len(b))
+		if len(b) < binarySize {
+			return nil, fmt.Errorf("wrong length length %d", len(b))
 		}
 
 		var length int64
-		if err = gob.NewDecoder(bytes.NewReader(b[:4])).Decode(&length); err != nil {
-			return fmt.Errorf("could not decode length: %v", err)
+		if err := binary.Read(bytes.NewReader(b[:binarySize]), binary.LittleEndian, &length); err != nil {
+			return nil, fmt.Errorf("could not decode message length: %v", err)
 		}
-		b = b[4:]
+		b = b[binarySize:]
 
 		var debt ledger.Debt
-		if err = proto.Unmarshal(b[:length], &debt); err == io.EOF {
-			return nil
-		} else if err != nil {
-			return fmt.Errorf("could not decode proto debt: %v", err)
+		if err = proto.Unmarshal(b[:length], &debt); err != nil {
+			return nil, fmt.Errorf("could not decode proto debt: %v", err)
 		}
 		b = b[length:]
 
-		fmt.Printf("Debt: %d | %s\n", debt.Value, debt.Desc)
+		debts.Debts = append(debts.Debts, &debt)
 	}
 
-	return nil
+	return &debts, nil
 }

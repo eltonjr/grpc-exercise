@@ -1,17 +1,15 @@
 package main
 
 import (
-	"bytes"
-	"encoding/gob"
+	"context"
 	"flag"
 	"fmt"
-	"io"
-	"io/ioutil"
+	"log"
 	"os"
 	"strconv"
 	"strings"
 
-	"github.com/golang/protobuf/proto"
+	grpc "google.golang.org/grpc"
 
 	"github.com/eltonjr/protocol-buffer-exercise/ledger"
 )
@@ -25,7 +23,11 @@ func main() {
 		os.Exit(0)
 	}
 
-	var err error
+	conn, err := grpc.Dial(":8888", grpc.WithInsecure())
+	if err != nil {
+		log.Fatalf("could not dial to grpc server at 8888, %v", err)
+	}
+	client := ledger.NewDebtsClient(conn)
 
 	switch cmd := flag.Args()[0]; cmd {
 	case "add":
@@ -36,11 +38,11 @@ func main() {
 			if err != nil {
 				err = fmt.Errorf("value being added must be a number: %v", err)
 			} else {
-				err = add(value, strings.Join(flag.Args()[2:], " "))
+				err = add(context.Background(), client, value, strings.Join(flag.Args()[2:], " "))
 			}
 		}
 	case "list":
-		err = list()
+		err = list(context.Background(), client)
 	default:
 		err = fmt.Errorf("invalid command '%s'", cmd)
 	}
@@ -51,68 +53,29 @@ func main() {
 	}
 }
 
-func add(value int64, s string) error {
+func add(ctx context.Context, client ledger.DebtsClient, value int64, s string) error {
 	debt := &ledger.Debt{
 		Desc:  s,
 		Value: value,
 	}
 
-	b, err := proto.Marshal(debt)
+	_, err := client.Add(ctx, debt)
 	if err != nil {
-		return fmt.Errorf("could not marshal debt: %v", err)
+		return fmt.Errorf("could not add debt in server: %v", err)
 	}
 
-	f, err := os.OpenFile(dbFile, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0666)
-	if err != nil {
-		return fmt.Errorf("could not open file %s: %v", dbFile, err)
-	}
-
-	if err = gob.NewEncoder(f).Encode(int64(len(b))); err != nil {
-		return fmt.Errorf("could not write message's length: %v", err)
-	}
-
-	_, err = f.Write(b)
-	if err != nil {
-		return fmt.Errorf("could not write debt to file: %v", err)
-	}
-
-	if err = f.Close(); err != nil {
-		return fmt.Errorf("could not close file %s: %v", dbFile, err)
-	}
-
+	fmt.Println("debt added successfully")
 	return nil
 }
 
-func list() error {
-	b, err := ioutil.ReadFile(dbFile)
+func list(ctx context.Context, client ledger.DebtsClient) error {
+	debts, err := client.List(ctx, &ledger.Void{})
 	if err != nil {
-		return fmt.Errorf("could not open file %s: %v", dbFile, err)
+		return fmt.Errorf("could not list from grpc server: %v", err)
 	}
 
-	for {
-		if len(b) == 0 {
-			return nil
-		}
-		if len(b) < 4 {
-			return fmt.Errorf("wrong length length %d", len(b))
-		}
-
-		var length int64
-		if err = gob.NewDecoder(bytes.NewReader(b[:4])).Decode(&length); err != nil {
-			return fmt.Errorf("could not decode length: %v", err)
-		}
-		b = b[4:]
-
-		var debt ledger.Debt
-		if err = proto.Unmarshal(b[:length], &debt); err == io.EOF {
-			return nil
-		} else if err != nil {
-			return fmt.Errorf("could not decode proto debt: %v", err)
-		}
-		b = b[length:]
-
+	for _, debt := range debts.Debts {
 		fmt.Printf("Debt: %d | %s\n", debt.Value, debt.Desc)
 	}
-
 	return nil
 }
